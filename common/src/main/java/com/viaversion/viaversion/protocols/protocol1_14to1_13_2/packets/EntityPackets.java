@@ -17,6 +17,7 @@
  */
 package com.viaversion.viaversion.protocols.protocol1_14to1_13_2.packets;
 
+import com.viaversion.viaversion.api.Via;
 import com.viaversion.viaversion.api.minecraft.Position;
 import com.viaversion.viaversion.api.minecraft.entities.Entity1_13Types;
 import com.viaversion.viaversion.api.minecraft.entities.Entity1_14Types;
@@ -31,6 +32,7 @@ import com.viaversion.viaversion.protocols.protocol1_13to1_12_2.ClientboundPacke
 import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.ClientboundPackets1_14;
 import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.Protocol1_14To1_13_2;
 import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.metadata.MetadataRewriter1_14To1_13_2;
+import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.provider.ViewProvider;
 import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.storage.EntityTracker1_14;
 import com.viaversion.viaversion.protocols.protocol1_9_3to1_9_1_2.storage.ClientWorld;
 import java.util.LinkedList;
@@ -211,7 +213,7 @@ public class EntityPackets {
                     wrapper.passthrough(Type.UNSIGNED_BYTE); // Max Players
                     wrapper.passthrough(Type.STRING); // Level Type
 
-                    wrapper.write(Type.VAR_INT, WorldPackets.SERVERSIDE_VIEW_DISTANCE);  // Serverside view distance, added in 19w13a
+                    wrapper.write(Type.VAR_INT, Via.getManager().getProviders().get(ViewProvider.class).getDistance());  // Serverside view distance, added in 19w13a
                 });
                 handler(wrapper -> {
                     // Manually send the packet
@@ -219,7 +221,7 @@ public class EntityPackets {
                     wrapper.cancel();
 
                     // View distance has to be sent after the join packet
-                    WorldPackets.sendViewDistancePacket(wrapper.user());
+                    WorldPackets.sendViewPositionPacket(wrapper.user());
                 });
             }
         });

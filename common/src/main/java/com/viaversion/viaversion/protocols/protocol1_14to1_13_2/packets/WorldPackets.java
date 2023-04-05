@@ -34,6 +34,7 @@ import com.viaversion.viaversion.protocols.protocol1_13to1_12_2.ClientboundPacke
 import com.viaversion.viaversion.protocols.protocol1_13to1_12_2.types.Chunk1_13Type;
 import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.ClientboundPackets1_14;
 import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.Protocol1_14To1_13_2;
+import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.provider.ViewProvider;
 import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.storage.EntityTracker1_14;
 import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.types.Chunk1_14Type;
 import com.viaversion.viaversion.protocols.protocol1_9_3to1_9_1_2.storage.ClientWorld;
@@ -42,7 +43,6 @@ import com.viaversion.viaversion.util.CompactArrayUtil;
 import java.util.Arrays;
 
 public class WorldPackets {
-    public static final int SERVERSIDE_VIEW_DISTANCE = 64;
     private static final byte[] FULL_LIGHT = new byte[2048];
     public static int air;
     public static int voidAir;
@@ -223,18 +223,17 @@ public class WorldPackets {
                 lightPacket.write(Type.BYTE_ARRAY_PRIMITIVE, section.getLight().getBlockLight());
             }
 
+            ViewProvider viewProvider = Via.getManager().getProviders().get(ViewProvider.class);
+            int chunkX = viewProvider.getX(wrapper.user());
+            int chunkZ = viewProvider.getZ(wrapper.user());
             EntityTracker1_14 entityTracker = wrapper.user().getEntityTracker(Protocol1_14To1_13_2.class);
-            int diffX = Math.abs(entityTracker.getChunkCenterX() - chunk.getX());
-            int diffZ = Math.abs(entityTracker.getChunkCenterZ() - chunk.getZ());
-            if (entityTracker.isForceSendCenterChunk()
-                    || diffX >= SERVERSIDE_VIEW_DISTANCE
-                    || diffZ >= SERVERSIDE_VIEW_DISTANCE) {
+            if (chunkX != entityTracker.getChunkCenterX() || chunkZ != entityTracker.getChunkCenterZ()) {
                 PacketWrapper fakePosLook = wrapper.create(ClientboundPackets1_14.UPDATE_VIEW_POSITION); // Set center chunk
-                fakePosLook.write(Type.VAR_INT, chunk.getX());
-                fakePosLook.write(Type.VAR_INT, chunk.getZ());
+                fakePosLook.write(Type.VAR_INT, chunkX);
+                fakePosLook.write(Type.VAR_INT, chunkZ);
                 fakePosLook.send(Protocol1_14To1_13_2.class);
-                entityTracker.setChunkCenterX(chunk.getX());
-                entityTracker.setChunkCenterZ(chunk.getZ());
+                entityTracker.setChunkCenterX(chunkX);
+                entityTracker.setChunkCenterZ(chunkZ);
             }
 
             lightPacket.send(Protocol1_14To1_13_2.class);
@@ -300,7 +299,7 @@ public class WorldPackets {
                     // Manually send the packet and update the viewdistance after
                     wrapper.send(Protocol1_14To1_13_2.class);
                     wrapper.cancel();
-                    sendViewDistancePacket(wrapper.user());
+                    sendViewPositionPacket(wrapper.user());
                 });
             }
         });
@@ -313,10 +312,12 @@ public class WorldPackets {
         });
     }
 
-    static void sendViewDistancePacket(UserConnection connection) throws Exception {
-        PacketWrapper setViewDistance = PacketWrapper.create(ClientboundPackets1_14.UPDATE_VIEW_DISTANCE, null, connection);
-        setViewDistance.write(Type.VAR_INT, WorldPackets.SERVERSIDE_VIEW_DISTANCE);
-        setViewDistance.send(Protocol1_14To1_13_2.class);
+    static void sendViewPositionPacket(UserConnection connection) throws Exception {
+        PacketWrapper fakePosLook = PacketWrapper.create(ClientboundPackets1_14.UPDATE_VIEW_POSITION, null, connection);
+        ViewProvider viewProvider = Via.getManager().getProviders().get(ViewProvider.class);
+        fakePosLook.write(Type.VAR_INT, viewProvider.getX(connection));
+        fakePosLook.write(Type.VAR_INT, viewProvider.getZ(connection));
+        fakePosLook.send(Protocol1_14To1_13_2.class);
     }
 
     private static long[] encodeHeightMap(int[] heightMap) {

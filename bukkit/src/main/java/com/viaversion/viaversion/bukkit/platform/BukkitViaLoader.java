@@ -42,6 +42,7 @@ import com.viaversion.viaversion.bukkit.providers.BukkitViaMovementTransmitter;
 import com.viaversion.viaversion.protocols.protocol1_12to1_11_1.providers.InventoryQuickMoveProvider;
 import com.viaversion.viaversion.protocols.protocol1_13to1_12_2.blockconnections.ConnectionData;
 import com.viaversion.viaversion.protocols.protocol1_13to1_12_2.blockconnections.providers.BlockConnectionProvider;
+import com.viaversion.viaversion.protocols.protocol1_14to1_13_2.provider.ViewProvider;
 import com.viaversion.viaversion.protocols.protocol1_19to1_18_2.provider.AckSequenceProvider;
 import com.viaversion.viaversion.protocols.protocol1_9to1_8.providers.HandItemProvider;
 import com.viaversion.viaversion.protocols.protocol1_9to1_8.providers.MovementTransmitterProvider;
@@ -190,6 +191,32 @@ public class BukkitViaLoader implements ViaPlatformLoader {
                 Via.getManager().getProviders().use(BlockConnectionProvider.class, blockConnectionProvider);
                 ConnectionData.blockConnectionProvider = blockConnectionProvider;
             }
+        }
+        if (serverProtocolVersion < ProtocolVersion.v1_14.getVersion()) {
+            Via.getManager().getProviders().use(ViewProvider.class, new ViewProvider() {
+                @Override
+                public int getDistance() {
+                    return Bukkit.getViewDistance() - 2;
+                }
+
+                @Override
+                public int getX(UserConnection user) {
+                    Player player = Bukkit.getPlayer(user.getProtocolInfo().getUuid());
+                    if (player != null) {
+                        return player.getLocation().getBlockX() / 16;
+                    }
+                    return 0;
+                }
+
+                @Override
+                public int getZ(UserConnection user) {
+                    Player player = Bukkit.getPlayer(user.getProtocolInfo().getUuid());
+                    if (player != null) {
+                        return player.getLocation().getBlockZ() / 16;
+                    }
+                    return 0;
+                }
+            });
         }
         if (serverProtocolVersion < ProtocolVersion.v1_19.getVersion()) {
             Via.getManager().getProviders().use(AckSequenceProvider.class, new BukkitAckSequenceProvider(plugin));
